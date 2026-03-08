@@ -7,10 +7,10 @@ local gui = lp:WaitForChild("PlayerGui")
 
 local NOTIF_WIDTH = 340
 local NOTIF_HEIGHT = 80
-local NOTIF_OVERLAP = 18
 local NOTIF_PADDING_R = 20
 local NOTIF_PADDING_B = 20
-local MAX_NOTIFS = 6
+local PEEK_OFFSET = 7
+local MAX_NOTIFS = 5
 
 local COLORS = {
     info    = Color3.fromRGB(80,  80,  220),
@@ -33,16 +33,22 @@ _G.PhantomNotifyGui = ScreenGui
 
 local activeNotifs = {}
 
+local function setZIndex(frame, z)
+    frame.ZIndex = z
+    for _, v in ipairs(frame:GetDescendants()) do
+        if v:IsA("GuiObject") then v.ZIndex = z + 1 end
+    end
+end
+
 local function repositionAll()
     for i, data in ipairs(activeNotifs) do
-        local targetY = -(NOTIF_PADDING_B + (i - 1) * (NOTIF_HEIGHT - NOTIF_OVERLAP) + NOTIF_HEIGHT)
-        local zIndex = MAX_NOTIFS - i + 1
-        data.frame.ZIndex = zIndex
-        for _, v in ipairs(data.frame:GetDescendants()) do
-            if v:IsA("GuiObject") then v.ZIndex = zIndex + 1 end
-        end
-        TweenService:Create(data.frame, TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-            Position = UDim2.new(1, -(NOTIF_WIDTH + NOTIF_PADDING_R), 1, targetY)
+        local z = MAX_NOTIFS - i + 2
+        setZIndex(data.frame, z)
+        local peekBack = (i - 1) * PEEK_OFFSET
+        local targetY = -(NOTIF_PADDING_B + NOTIF_HEIGHT) - peekBack
+        TweenService:Create(data.frame, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+            Position = UDim2.new(1, -(NOTIF_WIDTH + NOTIF_PADDING_R), 1, targetY),
+            Size = UDim2.new(0, NOTIF_WIDTH - (i - 1) * 10, 0, NOTIF_HEIGHT),
         }):Play()
     end
 end
@@ -62,7 +68,7 @@ local function removeNotif(data)
 
     local frame = data.frame
     TweenService:Create(frame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-        Position = UDim2.new(1, NOTIF_PADDING_R + 20, frame.Position.Y.Scale, frame.Position.Y.Offset),
+        Position = UDim2.new(1, 60, frame.Position.Y.Scale, frame.Position.Y.Offset),
         BackgroundTransparency = 1,
     }):Play()
 
@@ -82,15 +88,15 @@ function Notify(title, message, duration, notifType)
         removeNotif(activeNotifs[#activeNotifs])
     end
 
-    local startY = -(NOTIF_PADDING_B + NOTIF_HEIGHT)
+    local baseY = -(NOTIF_PADDING_B + NOTIF_HEIGHT)
 
     local Frame = Instance.new("Frame")
     Frame.Size = UDim2.new(0, NOTIF_WIDTH, 0, NOTIF_HEIGHT)
-    Frame.Position = UDim2.new(1, NOTIF_PADDING_R + 20, 1, startY)
+    Frame.Position = UDim2.new(1, 60, 1, baseY)
     Frame.BackgroundColor3 = Color3.fromRGB(10, 10, 14)
     Frame.BorderSizePixel = 0
     Frame.ClipsDescendants = true
-    Frame.ZIndex = MAX_NOTIFS
+    Frame.ZIndex = MAX_NOTIFS + 2
     Frame.Parent = ScreenGui
     Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 10)
 
@@ -112,7 +118,6 @@ function Notify(title, message, duration, notifType)
     AccentBar.AnchorPoint = Vector2.new(0, 0.5)
     AccentBar.BackgroundColor3 = accent
     AccentBar.BorderSizePixel = 0
-    AccentBar.ZIndex = MAX_NOTIFS + 1
     AccentBar.Parent = Frame
     Instance.new("UICorner", AccentBar).CornerRadius = UDim.new(1, 0)
 
@@ -125,7 +130,6 @@ function Notify(title, message, duration, notifType)
     TitleLbl.TextSize = 14
     TitleLbl.Font = Enum.Font.GothamBold
     TitleLbl.TextXAlignment = Enum.TextXAlignment.Left
-    TitleLbl.ZIndex = MAX_NOTIFS + 1
     TitleLbl.Parent = Frame
 
     local MsgLbl = Instance.new("TextLabel")
@@ -138,7 +142,6 @@ function Notify(title, message, duration, notifType)
     MsgLbl.Font = Enum.Font.Gotham
     MsgLbl.TextXAlignment = Enum.TextXAlignment.Left
     MsgLbl.TextTruncate = Enum.TextTruncate.AtEnd
-    MsgLbl.ZIndex = MAX_NOTIFS + 1
     MsgLbl.Parent = Frame
 
     local Badge = Instance.new("TextLabel")
@@ -150,7 +153,6 @@ function Notify(title, message, duration, notifType)
     Badge.TextSize = 9
     Badge.Font = Enum.Font.GothamBold
     Badge.BorderSizePixel = 0
-    Badge.ZIndex = MAX_NOTIFS + 1
     Badge.Parent = Frame
     Instance.new("UICorner", Badge).CornerRadius = UDim.new(0, 4)
 
@@ -159,7 +161,6 @@ function Notify(title, message, duration, notifType)
     BarBg.Position = UDim2.new(0, 0, 1, -3)
     BarBg.BackgroundColor3 = Color3.fromRGB(22, 22, 34)
     BarBg.BorderSizePixel = 0
-    BarBg.ZIndex = MAX_NOTIFS + 1
     BarBg.Parent = Frame
     Instance.new("UICorner", BarBg).CornerRadius = UDim.new(0, 1)
 
@@ -167,7 +168,6 @@ function Notify(title, message, duration, notifType)
     Bar.Size = UDim2.new(1, 0, 1, 0)
     Bar.BackgroundColor3 = accent
     Bar.BorderSizePixel = 0
-    Bar.ZIndex = MAX_NOTIFS + 2
     Bar.Parent = BarBg
 
     local CloseBtn = Instance.new("TextButton")
@@ -178,7 +178,6 @@ function Notify(title, message, duration, notifType)
     CloseBtn.TextColor3 = Color3.fromRGB(80, 80, 100)
     CloseBtn.TextSize = 12
     CloseBtn.Font = Enum.Font.GothamBold
-    CloseBtn.ZIndex = MAX_NOTIFS + 2
     CloseBtn.Parent = Frame
 
     local data = { frame = Frame, bar = Bar, removed = false }
@@ -186,7 +185,7 @@ function Notify(title, message, duration, notifType)
     repositionAll()
 
     TweenService:Create(Frame, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Position = UDim2.new(1, -(NOTIF_WIDTH + NOTIF_PADDING_R), 1, startY)
+        Position = UDim2.new(1, -(NOTIF_WIDTH + NOTIF_PADDING_R), 1, baseY)
     }):Play()
 
     local elapsed = 0
